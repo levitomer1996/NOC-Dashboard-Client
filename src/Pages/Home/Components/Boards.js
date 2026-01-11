@@ -8,12 +8,16 @@ import TableRow from '@mui/material/TableRow';
 import Paper from '@mui/material/Paper';
 import CircularProgress from '@mui/material/CircularProgress';
 import Box from '@mui/material/Box';
+import { Typography, Button } from '@mui/material';
 
 import Cell from './Cell';
 import { useAlerts } from '../../../Context/AlertsContext';
 import { classifyAlert, classifyAlerts } from '../../../utils/alertClassifier';
 import putAlertInMatrix from '../../../utils/putAlertInMatrix';
 import getMaxPriortyAlert from '../../../utils/getMaxPriortyAlert';
+import BusinessUnit from './BusinessUnit';
+import { removeEnvironmentFromBoardByName } from '../../../utils/removeCustomerFromBoardByName';
+import { addEnvironmentToBoardByName } from '../../../utils/addEnvironmentToBoardByName';
 
 const keyOf = (metric, env) =>
     `${String(metric).toLowerCase()}__${String(env).toLowerCase()}`;
@@ -26,73 +30,78 @@ const getWorstPriority = (alerts = []) => {
 
     if (priorities.length === 0) return null;
 
-    // P1 is worst => smallest rank
     return priorities.sort(
         (a, b) => (priorityRank[a] ?? 999) - (priorityRank[b] ?? 999),
     )[0];
 };
 
-const Boards = () => {
-    const [board, setBoard] = useState(null);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+const Board = ({ board, loading, error }) => {
     const [classification, setClassification] = useState(null);
-    const { alerts, isConnected, clearAlerts } = useAlerts();
     const [alertmat, setAlertmat] = useState([]);
-    // metric__env -> alerts[]
     const [alertsByCell, setAlertsByCell] = useState({});
 
-    // fetch board from backend
-    useEffect(() => {
-        const fetchBoard = async () => {
-            try {
-                setLoading(true);
-                setError(null);
-
-                const res = await fetch('http://localhost:4000/boards');
-                if (!res.ok) {
-                    const text = await res.text();
-                    throw new Error(
-                        `Failed to load boards: ${res.status} ${res.statusText} - ${text}`,
-                    );
-                }
-
-                const boards = await res.json();
-                const defaultBoard = boards.find((b) => b.isDefault) ?? boards[0];
-                setBoard(defaultBoard || null);
-            } catch (err) {
-                console.error(err);
-                setError(err.message || 'Failed to load board');
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        fetchBoard();
-    }, []);
-
-    const environments = board?.environments || [];
+    // ✅ local environments state so UI updates when we add/remove
+    const [envs, setEnvs] = useState(board?.environments || []);
     const metrics = board?.metrics || [];
 
-    // consume alerts and bucket them into metric×env cells
+    const { alerts, isConnected, clearAlerts } = useAlerts();
+
+    useEffect(() => {
+        // if board changes (e.g. parent refetch), sync envs
+        setEnvs(board?.environments || []);
+    }, [board]);
+
     useEffect(() => {
         if (!board) return;
         if (!Array.isArray(alerts) || alerts.length === 0) return;
 
-        // optional debug
         const classified = classifyAlerts(alerts);
         setClassification(classified);
-        const alertmats = putAlertInMatrix(environments, metrics, classified);
-        setAlertmat(alertmats);
-        console.log('Alert Matrix:', alertmat);
-        console.log('Classified alerts (array):', classification);
-        clearAlerts();
 
-    }, [alerts, board, metrics, environments, clearAlerts]);
+        const alertmats = putAlertInMatrix(envs, metrics, classified);
+        setAlertmat(alertmats);
+
+        console.log('Alert Matrix:', alertmats);
+        console.log('Classified alerts (array):', classified);
+
+        clearAlerts();
+    }, [alerts, board, envs, metrics, clearAlerts]);
 
     const handleCellClick = (metric, env) => {
         const cellAlerts = alertsByCell[keyOf(metric, env)] || [];
+        console.log('Cell clicked', metric, env, cellAlerts);
+    };
 
+    const handleRemoveEnv = async (env) => {
+        try {
+            const updatedBoard = await removeEnvironmentFromBoardByName(
+                board._id,
+                env,
+            );
+            setEnvs(updatedBoard.environments || []);
+        } catch (e) {
+            console.error('Failed to remove environment:', e);
+            alert(e.message || 'Failed to remove environment');
+        }
+    };
+
+    const handleAddEnv = async () => {
+        const name = window.prompt('Enter environment name (e.g. NG-LOT):');
+        if (!name) return;
+
+        const trimmed = name.trim();
+        if (!trimmed) return;
+
+        try {
+            const updatedBoard = await addEnvironmentToBoardByName(
+                board._id,
+                trimmed,
+            );
+            setEnvs(updatedBoard.environments || []);
+        } catch (e) {
+            console.error('Failed to add environment:', e);
+            alert(e.message || 'Failed to add environment');
+        }
     };
 
     if (loading) {
@@ -128,12 +137,40 @@ const Boards = () => {
 
     return (
         <TableContainer component={Paper} elevation={2}>
+            <Box
+                sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    p: 2,
+                }}
+            >
+                <Typography variant="h5" fontWeight={700}>
+                    {board.name || 'Business Units'}
+                </Typography>
+
+                {/* ✅ Add Environment button */}
+                <Button
+                    variant="contained"
+                    size="small"
+                    onClick={handleAddEnv}
+                >
+                    + Add Environment
+                </Button>
+            </Box>
+
             <Table size="small" aria-label="boards table">
                 <TableHead>
                     <TableRow>
                         <TableCell>Metric</TableCell>
-                        {environments.map((env, idx) => (
-                            <TableCell key={idx}>{env}</TableCell>
+                        {envs.map((env, idx) => (
+                            <TableCell
+                                key={idx}
+                                onClick={() => handleRemoveEnv(env)}
+                                sx={{ cursor: 'pointer' }}
+                            >
+                                {env}
+                            </TableCell>
                         ))}
                     </TableRow>
                 </TableHead>
@@ -143,25 +180,29 @@ const Boards = () => {
                         <TableRow key={rowIndex}>
                             <TableCell>{metric}</TableCell>
 
-                            {environments.map((env) => {
-                                let arr = (classification || []).filter(
+                            {envs.map((env) => {
+                                console.log('Classification:', classification);
+                                const arr = (classification || []).filter(
                                     (a) => a.env === env && a.metric === metric
                                 );
-                                console.log(arr);
-                                console.log(getMaxPriortyAlert(arr))
+
                                 const cellKey = keyOf(metric, env);
                                 const cellAlerts = alertsByCell[cellKey] || [];
-                                const worstPriority = getWorstPriority(cellAlerts);
+                                const worstPriority =
+                                    getWorstPriority(cellAlerts);
 
                                 return (
                                     <Cell
+                                        boardsId={board._id}
                                         key={cellKey}
                                         metric={metric}
                                         env={env}
                                         alerts={cellAlerts}
                                         count={cellAlerts.length}
                                         value={getMaxPriortyAlert(arr)}
-                                        onClick={() => handleCellClick(metric, env)}
+                                        onClick={() =>
+                                            handleCellClick(metric, env)
+                                        }
                                     />
                                 );
                             })}
@@ -173,4 +214,4 @@ const Boards = () => {
     );
 };
 
-export default Boards;
+export default Board;

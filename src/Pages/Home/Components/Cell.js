@@ -20,7 +20,14 @@ const colorFor = (val) => {
     }
 }
 
-const Cell = ({ value, onClick }) => {
+const Cell = ({ boardId,
+    metric,
+    env,
+    alerts = [],
+    count = 0,
+    value,
+    onClick, }) => {
+
     const bg = colorFor(value)
     console.log(value)
     return (

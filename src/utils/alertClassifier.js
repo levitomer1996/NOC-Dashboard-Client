@@ -1,3 +1,6 @@
+import api from "../API/api";
+
+
 function normalize(str) {
     return String(str || '')
         .toLowerCase()
@@ -6,120 +9,135 @@ function normalize(str) {
         .replace(/[^a-z0-9:_-]/g, '');
 }
 
-const ENV_DICTIONARY = {
-    // Alberta
-    AGLC: [
-        'aglc',
-        'datacentername:aglc',
-    ],
+const ENV_DICTIONARY = await api
+    .get('/dictionary?name=' + process.env.REACT_APP_MONGO_DB_ENV_DICTIONARY)
+    .then(res => res.data.entries)
+    .catch(err => {
+        console.error('Failed to load environment dictionary:', err);
+        return {};
+    });
 
-    // North Carolina Education Lottery
-    NCEL: [
-        'ncel',
-        'nc',
-        'northcarolina',
-        'north_carolina',
-        'datacentername:nc',
-    ],
+const METRIC_DICTIONARY = await api
+    .get('/dictionary?name=' + process.env.REACT_APP_MONGO_DB_METRIC_DICTIONARY)
+    .then(res => res.data.entries)
+    .catch(err => {
+        console.error('Failed to load metric dictionary:', err);
+        return {};
+    });
+// const ENV_DICTIONARY = {
+//     // Alberta
+//     AGLC: [
+//         'aglc',
+//         'datacentername:aglc',
+//     ],
 
-    // Sazka / Czech Republic
-    SAZKA: [
-        'sazka',
-        'sz',
-        'cz',
-        'czech',
-        'czechrepublic',
-        'datacentername:cz',
-    ],
+//     // North Carolina Education Lottery
+//     NCEL: [
+//         'ncel',
+//         'nc',
+//         'northcarolina',
+//         'north_carolina',
+//         'datacentername:nc',
+//     ],
 
-    // Michigan State Lottery
-    MSL: [
-        'msl',
-        'mi',
-        'michigan',
-        'datacentername:mi',
-    ],
+//     // Sazka / Czech Republic
+//     SAZKA: [
+//         'sazka',
+//         'sz',
+//         'cz',
+//         'czech',
+//         'czechrepublic',
+//         'datacentername:cz',
+//     ],
 
-    // Virginia Lottery
-    VAL: [
-        'val',
-        'va',
-        'virginia',
-        'datacentername:va',
-    ],
+//     // Michigan State Lottery
+//     MSL: [
+//         'msl',
+//         'mi',
+//         'michigan',
+//         'datacentername:mi',
+//     ],
 
-    // West Virginia Lottery
-    WV: [
-        'wv',
-        'westvirginia',
-        'west_virginia',
-        'datacentername:wv',
-    ],
+//     // Virginia Lottery
+//     VAL: [
+//         'val',
+//         'va',
+//         'virginia',
+//         'datacentername:va',
+//     ],
 
-    // Nigeria Lottery
-    'NG-LOT': [
-        'ng-lot',
-        'ng',
-        'nigeria',
-        'datacentername:ng',
-    ],
+//     // West Virginia Lottery
+//     WV: [
+//         'wv',
+//         'westvirginia',
+//         'west_virginia',
+//         'datacentername:wv',
+//     ],
 
-    // New Hampshire Lottery
-    NHL: [
-        'nh',
-        'nhl',
-        'newhampshire',
-        'new_hampshire',
-        'datacentername:nh',
-    ],
+//     // Nigeria Lottery
+//     'NG-LOT': [
+//         'ng-lot',
+//         'ng',
+//         'nigeria',
+//         'datacentername:ng',
+//     ],
 
-    // US Lottery / IGT / ALC
-    'US-LOT': [
-        'us-lot',
-        'igt',
-        'alc',
-        'uslot',
-        'datacentername:us',
-    ],
-};
+//     // New Hampshire Lottery
+//     NHL: [
+//         'nh',
+//         'nhl',
+//         'newhampshire',
+//         'new_hampshire',
+//         'datacentername:nh',
+//     ],
+
+//     // US Lottery / IGT / ALC
+//     'US-LOT': [
+//         'us-lot',
+//         'igt',
+//         'alc',
+//         'uslot',
+//         'datacentername:us',
+//     ],
+// };
 
 
-const METRIC_DICTIONARY = {
-    Deposits: [
-        'deposit',
-        'deposits',
-    ],
+// const METRIC_DICTIONARY = {
+//     Deposits: [
+//         'deposit',
+//         'deposits',
+//     ],
 
-    Bets: [
-        'bet',
-        'bets',
-        'wager',
-        'wagers',
-        'betting',
-    ],
+//     Bets: [
+//         'bet',
+//         'bets',
+//         'wager',
+//         'wagers',
+//         'betting',
+//     ],
 
-    Logins: [
-        'login',
-        'logins',
-        'authentication',
-        'auth',
-        'signin',
-    ],
+//     Logins: [
+//         'login',
+//         'logins',
+//         'authentication',
+//         'auth',
+//         'signin',
+//     ],
 
-    Performance: [
-        'cpu',
-        'coralogix',
-        'apm',
-        'mem',
-        'memory',
-        'ram',
-        'response time',
-        'responsetime',
-        'latency',
-        'slow',
-        'timeout',
-    ],
-};
+//     Performance: [
+//         'cpu',
+//         'coralogix',
+//         'apm',
+//         'mem',
+//         'memory',
+//         'ram',
+//         'response time',
+//         'responsetime',
+//         'latency',
+//         'slow',
+//         'timeout',
+//     ],
+// };
 
 
 // priority order (optional, useful later for coloring)
