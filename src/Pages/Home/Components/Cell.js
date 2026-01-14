@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import TableCell from '@mui/material/TableCell'
 import Box from '@mui/material/Box'
 import { computeHeadingLevel } from '@testing-library/dom'
@@ -23,13 +23,14 @@ const colorFor = (val) => {
 const Cell = ({ boardId,
     metric,
     env,
-    alerts = [],
+    alerts,
     count = 0,
     value,
+
     onClick, }) => {
 
     const bg = colorFor(value)
-    console.log(value)
+
     return (
         <TableCell
             onClick={onClick}

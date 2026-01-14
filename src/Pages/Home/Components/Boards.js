@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import Table from '@mui/material/Table';
 import TableBody from '@mui/material/TableBody';
 import TableCell from '@mui/material/TableCell';
@@ -18,6 +18,7 @@ import getMaxPriortyAlert from '../../../utils/getMaxPriortyAlert';
 import BusinessUnit from './BusinessUnit';
 import { removeEnvironmentFromBoardByName } from '../../../utils/removeCustomerFromBoardByName';
 import { addEnvironmentToBoardByName } from '../../../utils/addEnvironmentToBoardByName';
+import ModalContext from '../../../Context/ModalContext';
 
 const keyOf = (metric, env) =>
     `${String(metric).toLowerCase()}__${String(env).toLowerCase()}`;
@@ -39,8 +40,9 @@ const Board = ({ board, loading, error }) => {
     const [classification, setClassification] = useState(null);
     const [alertmat, setAlertmat] = useState([]);
     const [alertsByCell, setAlertsByCell] = useState({});
-
-    // ✅ local environments state so UI updates when we add/remove
+    const { openModal } = useContext(ModalContext);
+    // ✅ local environments state so UI updates when we add/
+    // remove
     const [envs, setEnvs] = useState(board?.environments || []);
     const metrics = board?.metrics || [];
 
@@ -61,15 +63,14 @@ const Board = ({ board, loading, error }) => {
         const alertmats = putAlertInMatrix(envs, metrics, classified);
         setAlertmat(alertmats);
 
-        console.log('Alert Matrix:', alertmats);
-        console.log('Classified alerts (array):', classified);
+
 
         clearAlerts();
     }, [alerts, board, envs, metrics, clearAlerts]);
 
-    const handleCellClick = (metric, env) => {
-        const cellAlerts = alertsByCell[keyOf(metric, env)] || [];
-        console.log('Cell clicked', metric, env, cellAlerts);
+    const handleCellClick = (metric, env, cellAlerts) => {
+
+        openModal('ALERT_LIST', { alerts: cellAlerts });
     };
 
     const handleRemoveEnv = async (env) => {
@@ -182,7 +183,7 @@ const Board = ({ board, loading, error }) => {
                             <TableCell>{metric}</TableCell>
 
                             {envs.map((env) => {
-                                console.log('Classification:', classification);
+
                                 const arr = (classification || []).filter(
                                     (a) => a.env === env && a.metric === metric
                                 );
@@ -202,7 +203,7 @@ const Board = ({ board, loading, error }) => {
                                         count={cellAlerts.length}
                                         value={getMaxPriortyAlert(arr)}
                                         onClick={() =>
-                                            handleCellClick(metric, env)
+                                            handleCellClick(metric, env, arr)
                                         }
                                     />
                                 );

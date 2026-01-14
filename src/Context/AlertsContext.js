@@ -21,7 +21,7 @@ export const AlertsProvider = ({ children }) => {
         });
 
         socket.on('opsgenieAlert', (alert) => {
-            console.log('Received opsgenieAlert:', alert);
+
             setAlerts((prev) => [alert, ...prev]); // prepend newest
         });
 
